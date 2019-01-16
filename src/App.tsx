@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Props } from 'react';
 import { Tabs, Button } from 'antd';
 import './App.css';
 
@@ -23,14 +23,8 @@ interface State {
   activeKey?: string
 }
 class App extends Component <any, State>{
+  state = initState;
 
-  constructor() {
-
-    super({}, initState);
-
-    this.state = initState;
-  }
-  
   add = () => {
     const panes = this.state.panes;
     const key = this.state.key + 1;
@@ -78,8 +72,9 @@ class App extends Component <any, State>{
   render() {
     return (
       <div>
-        <Button style={{margin: '5px' }} onClick={this.add}>Create Room</Button>
+        <Button size='small' style={{margin: '5px' }} onClick={this.add}>Create Room</Button>
         <Tabs
+          hideAdd={true}
           type="editable-card"
           onChange={this.onChange}
           activeKey={this.state.activeKey}

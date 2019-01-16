@@ -14,8 +14,8 @@ export class Participant {
     private webRTCClient = new WebRTCClient();
 
     public prepareParticipant = new rx.Subject();
-
-    public subscribersPublisher: rx.Subject<WebRTCClient> = new rx.Subject();
+    public webrtcStatePublisher = this.webRTCClient.statePublisher;
+    public subscribersPublisher: rx.Subject<{webRTC: WebRTCClient, publisher: string}> = new rx.Subject();
 
     private roomId: number | null = null;
 
@@ -42,6 +42,14 @@ export class Participant {
         )
         .switchMap(() => this.prepareParticipant)
     
+    public leaveRoom = () => {
+        this.connection.send({
+            body: {
+                request: 'leave'
+            }
+        })
+        this.webRTCClient.pc.close();
+    }
 
     private createPublisherPeerConnection = () => {
         this.webRTCClient.create()    
@@ -83,13 +91,16 @@ export class Participant {
             if (message.janus == 'event') {
                 
                 if (message.plugindata.data.videoroom == 'attached' && !subscribed) {
-                    // console.log('subscribed', subscribed, this.id, message.plugindata.data.display)
+                    console.log('subscribed', subscribed, this.id, message.plugindata.data.display)
                     
                     let webRTC: WebRTCClient = new WebRTCClient();
                     rx.Observable.of(webRTC)
                         .do(webRTC => {
                             console.log('webRTC:', webRTC)
-                            this.subscribersPublisher.next(webRTC)
+                            this.subscribersPublisher.next({
+                                webRTC,
+                                publisher: message.plugindata.data.display
+                            })
                         })
                         .flatMap(webRtc => webRtc.create())
                         .do(() => webRTC.pc.setRemoteDescription (message.jsep))
@@ -165,6 +176,11 @@ export class Participant {
                 if (message.plugindata.data.publishers[0] !== undefined) {
                     this.createSubscriberPeerConnection(message.plugindata.data.publishers[0].id);
                 }
+            }
+            else if (message.plugindata.data.leaving === 'ok') {
+                this.connection.send ({
+                    janus: 'detach'
+                })
             }
         } else if (message.candidate && message.janus == 'trickle') {
             if (message.candidate.completed != true) {

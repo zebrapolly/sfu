@@ -8,14 +8,16 @@ const Panel = Collapse.Panel;
 
 const initState: State = {
     key: 0,
-    children: [],
-    buttonEnabled: false
+    participants: [],
+    buttonEnabled: false,
+    activePanels: []
 }
   
 interface State {
-    children: Array<any>
+    participants: Array<{key: number, component: any}>
     key: number
     buttonEnabled: boolean
+    activePanels: Array<string>
 }
 interface Props {
     publisher: Subject<number>
@@ -35,16 +37,30 @@ export class RoomView extends Component<Props, State> {
             .subscribe(props.publisher);
     }
     state = initState;
-      
+    private unMountParticipant = (id: number) => {
+        const participants = this.state.participants.filter(participant => participant.key != id)
+        this.setState({
+            ...this.state,
+            participants
+        })
+        console.log('unMountParticipant', id);
+        console.log('UNMOUNT!')
+    }
     createParticipant = () => {
         if (this.roomId) {
             const key = this.state.key + 1
+            const activePanels = this.state.activePanels;
+            activePanels.push(key + '')
             console.log(key)
             this.setState({
                 key,
-                children: [
-                    ...this.state.children,
-                    <Panel key={key + ''} header={`Participant ${key}`}><ParticipantView  id={key} roomId={this.roomId}/></Panel>
+                activePanels,
+                participants: [
+                    ...this.state.participants,
+                    {
+                        key,
+                        component: <Panel key={key + ''} header={`Participant ${key}`}><ParticipantView unmount={this.unMountParticipant} id={key} roomId={this.roomId}/></Panel>
+                    }
                 ]
             });
         }
@@ -52,15 +68,21 @@ export class RoomView extends Component<Props, State> {
             console.log('room doesn\'t create');
         }
     }
-        
+    
     componentWillUnmount = () => {
         this.room.close().subscribe();
     }
+    private onChangeActivePanel = (activePanels: any) => {
+        this.setState({
+            ...this.state,
+            activePanels
+        })
+    }
     render() {
         return <div>
-            {this.state.buttonEnabled && <Button style={{marginLeft: '5px'}} onClick={this.createParticipant}>Create Participant</Button>}
-            <Collapse style={{marginTop: '10px'}} className="room-container">
-                {this.state.children.map(child => child)}
+            {this.state.buttonEnabled && <Button size='small' style={{marginLeft: '5px'}} onClick={this.createParticipant}>Create Participant</Button>}
+            <Collapse onChange={this.onChangeActivePanel} activeKey={this.state.activePanels} style={{marginTop: '10px'}} className="room-container">
+                {this.state.participants.map(child => child.component)}
             </Collapse>
         </div>
     }

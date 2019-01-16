@@ -55,8 +55,12 @@ export class JanusClient {
     send = (message: any) => {
         const transaction = v4();
         this.transactions.set(transaction, true);
+        let janus = "message";
+        if (message.janus) {
+            janus = message.janus;
+        }
         this.webSocket.send({
-            janus : "message",
+            janus,
             handle_id: this.handleId,
             transaction,
             ...message

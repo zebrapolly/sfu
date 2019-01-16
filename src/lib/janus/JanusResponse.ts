@@ -9,6 +9,7 @@ export interface JanusResponse {
     },
     plugindata: {
         data: {
+            leaving: string
             room: number
             videoroom: string
             id: number
