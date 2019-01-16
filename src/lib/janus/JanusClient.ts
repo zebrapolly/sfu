@@ -1,0 +1,65 @@
+import * as rx from "rxjs/Rx"
+
+import {WebSocketAdapter} from './WebSocketAdapter';
+import { JanusResponse } from "./JanusResponse";
+import { Subject } from "rxjs/Rx";
+import { v4 } from "uuid";
+
+export class JanusClient {
+
+    private handleId: number | null = null;
+    
+    public publisher: rx.Subject<JanusResponse>  = new Subject();
+
+    private readonly ready= new rx.Subject();
+    private transactions = new Map();
+    constructor(private readonly webSocket: WebSocketAdapter) {
+        webSocket.observer
+            .flatMap((message: JanusResponse) => {
+                console.log('message.transaction', this.handleId, message.transaction, this.transactions.has(message.transaction))
+                if (message.transaction) {
+                    if (!this.transactions.has(message.transaction)) {
+                        return rx.Observable.never();
+                    }
+                }
+                if (message.sender) {
+                    if (message.sender != this.handleId) {
+                        return rx.Observable.never();
+                    }
+                }
+                if (message.janus == 'success') {
+                    if (this.handleId == null) {
+                        this.handleId = message.data.id;
+                        this.ready.next();
+                        this.ready.complete();
+                        return rx.Observable.never()
+                    }
+                }
+                return rx.Observable.of(message);
+            })
+        .subscribe(this.publisher);
+    }
+
+    connect = () => this.webSocket.connect()
+        .do(() => {
+            const transaction = v4();
+            this.transactions.set(transaction, true);
+            this.webSocket.send({
+                janus : "attach",
+                transaction,
+                plugin : "janus.plugin.videoroom"
+            })
+        })
+        .flatMap(() => this.ready)
+
+    send = (message: any) => {
+        const transaction = v4();
+        this.transactions.set(transaction, true);
+        this.webSocket.send({
+            janus : "message",
+            handle_id: this.handleId,
+            transaction,
+            ...message
+        })
+    }
+}
