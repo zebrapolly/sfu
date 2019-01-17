@@ -1,7 +1,7 @@
 import {from, Subscription} from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import React, { Component } from 'react';
-import { Button, List } from 'antd';
+import { Button } from 'antd';
 const ButtonGroup = Button.Group;
 import {Participant} from '../../lib/Participant';
 import { WebRTCClient } from '../../lib/WebRTCClient';
@@ -12,6 +12,7 @@ interface Props {
     id: number
     roomId: number
     unmount: (id: number) => void
+    deviceId: string
 }
 
 interface State {
@@ -50,7 +51,7 @@ export class ParticipantView extends Component<Props, State>{
         super(props);
         this.setLocalVideo().subscribe();
         this.videoTag = React.createRef();
-        this.participant = new Participant('ws://localhost:8090/', this.props.id);
+        this.participant = new Participant('ws://localhost:8090/', this.props.id, this.props.deviceId);
         this.participant.create(this.props.roomId).subscribe();
     
         this.subscribersListener = this.participant.subscribersPublisher
@@ -104,8 +105,9 @@ export class ParticipantView extends Component<Props, State>{
             .subscribe()
     }
 
-    public setLocalVideo = () => 
-        this.getVideoStream ()
+    public setLocalVideo = () => {
+
+        return this.getVideoStream ()
             .pipe(
                 map((stream: MediaStream) => {
                     if (this.videoTag.current) {
@@ -113,9 +115,13 @@ export class ParticipantView extends Component<Props, State>{
                     }
                 })
             );
+    }
 
     private getVideoStream = () =>
-        from(navigator.mediaDevices.getUserMedia({audio: false, video: true}))
+        from(navigator.mediaDevices.getUserMedia({
+            audio: false, 
+            video: {deviceId: this.props.deviceId} 
+        }))
             .pipe(
                 tap((stream:MediaStream) => this.localVideoStream = stream),
                 tap((stream:MediaStream) => stream.stop = () => stream.getTracks().forEach(track => track.stop()))
@@ -135,6 +141,12 @@ export class ParticipantView extends Component<Props, State>{
         }
         this.props.unmount(this.props.id);
     }
+    private unpublish = () => {
+        this.participant.unpublish();
+    }
+    private publish = () => {
+        this.participant.createPublisherPeerConnection();
+    }
     render() {
         return <div>
             <div>
@@ -145,8 +157,8 @@ export class ParticipantView extends Component<Props, State>{
             <div>
                 <ButtonGroup>
                     <Button size='small' type='danger' onClick={this.leaveRoom}>Leave Room</Button>
-                    <Button size='small' type='dashed'>Unpublish</Button>
-                    <Button size='small' disabled={true} type='primary'>Publish</Button>
+                    <Button size='small' type='dashed' onClick={this.unpublish}>Unpublish</Button>
+                    <Button size='small' type='dashed' onClick={this.publish}>Publish</Button>
                 </ButtonGroup>
             </div>
             <h6>Local video</h6>

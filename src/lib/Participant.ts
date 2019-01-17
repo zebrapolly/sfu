@@ -19,15 +19,15 @@ export class Participant {
 
     private roomId: number | null = null;
 
-    constructor(private readonly url: string, private id: number) {
+    constructor(private readonly url: string, private id: number, private deviceId: string) {
         this.connection = new JanusClient (this.webSocket);
 
-        this.connection.publisher.flatMap(this.publish).subscribe();
+        this.connection.publisher.flatMap(this.participantProcedure).subscribe();
 
         // this.webRTCClient.setLocalVideo(this.id).subscribe();
 
     }
-
+    // private create
     public create = (roomId: number) => rx.Observable.of ({})
         .switchMap (() => this.connection.connect ())
         .do(() => this.roomId = roomId)
@@ -48,11 +48,14 @@ export class Participant {
                 request: 'leave'
             }
         })
+        this.webSocket.close();
         this.webRTCClient.pc.close();
+
     }
 
-    private createPublisherPeerConnection = () => {
-        this.webRTCClient.create()    
+    public createPublisherPeerConnection = () => {
+        this.webRTCClient = new WebRTCClient();
+        this.webRTCClient.create(this.deviceId)    
             .flatMap(() => rx.Observable.from(this.webRTCClient.pc.createOffer({
                 offerToReceiveVideo : true,
                 offerToReceiveAudio : true
@@ -71,6 +74,7 @@ export class Participant {
             })))
             .do(offer => this.webRTCClient.pc.setLocalDescription (offer))
         .subscribe();
+
         this.webRTCClient.pc.onicecandidate = ice => {
             if (ice.candidate != null) {
                 this.connection.send ({
@@ -83,15 +87,14 @@ export class Participant {
     }
 
     private createSubscriberPeerConnection = (publisherId: number) => {
-        let subscribed = false;
         const client = new JanusClient(this.webSocket);
        
         client.publisher
         .flatMap(async message => {
             if (message.janus == 'event') {
                 
-                if (message.plugindata.data.videoroom == 'attached' && !subscribed) {
-                    console.log('subscribed', subscribed, this.id, message.plugindata.data.display)
+                if (message.plugindata.data.videoroom == 'attached') {
+                    console.log('subscribed', this.id, message.plugindata.data.display)
                     
                     let webRTC: WebRTCClient = new WebRTCClient();
                     rx.Observable.of(webRTC)
@@ -102,7 +105,7 @@ export class Participant {
                                 publisher: message.plugindata.data.display
                             })
                         })
-                        .flatMap(webRtc => webRtc.create())
+                        // .flatMap(webRtc => webRtc.create())
                         .do(() => webRTC.pc.setRemoteDescription (message.jsep))
                         .flatMap(() => 
                             rx.Observable.from(webRTC.pc.createAnswer({
@@ -123,7 +126,6 @@ export class Participant {
                             })
                         ))
                         .flatMap(answer => webRTC.pc.setLocalDescription (answer))
-                        .do(() => subscribed = true)
                         .subscribe()
 
                     webRTC.pc.onicecandidate = ice => {
@@ -155,7 +157,18 @@ export class Participant {
             })
             .subscribe();
     }
-    private publish = (message: JanusResponse) => {
+    public unpublish = () => {
+        // this.webRTCClient.pc.close();
+        this.connection.send({
+            body: {
+                request: "unpublish"
+            }
+        })
+    }
+    // public publish = () => {
+    //     this.webRTCClient.pc.get
+    // }
+    private participantProcedure = (message: JanusResponse) => {
         console.log(message);
         if (message.janus == 'event') {
             if (message.plugindata.data.videoroom == 'joined') {

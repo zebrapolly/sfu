@@ -37,23 +37,23 @@ export class WebRTCClient {
     //     }),
     // )
 
-    public create = () =>
+    public create = (deviceId: string) =>
         zip(
             this.getAudioStream()
                 .map(stream => stream.getTracks())
                 .map(track => this.pc.addTrack(track[0])),
-            this.getVideoStream()
+            this.getVideoStream(deviceId)
                 .map(stream => stream.getTracks())
                 .map(track => this.pc.addTrack(track[0])),
         )
 
-        .do(() => {
+        // .do(() => {
 
-            this.pc.onconnectionstatechange = ()=> console.log (" PC.onconnectionstatechange : " + this.pc.connectionState)
-            // this.pc.oniceconnectionstatechange = ()=> console.log (" PC.oniceconnectionstatechange : " + this.pc.iceConnectionState)
-            // this.pc.onicegatheringstatechange = ()=> console.log (" onicegatheringstatechange : " + this.pc.iceGatheringState)
-            // this.pc.onsignalingstatechange = ()=> console.log (" PC.onsignalingstatechange : " + this.pc.signalingState);
-        })
+        //     this.pc.onconnectionstatechange = ()=> console.log (" PC.onconnectionstatechange : " + this.pc.connectionState)
+        //     // this.pc.oniceconnectionstatechange = ()=> console.log (" PC.oniceconnectionstatechange : " + this.pc.iceConnectionState)
+        //     // this.pc.onicegatheringstatechange = ()=> console.log (" onicegatheringstatechange : " + this.pc.iceGatheringState)
+        //     // this.pc.onsignalingstatechange = ()=> console.log (" PC.onsignalingstatechange : " + this.pc.signalingState);
+        // })
 
     // public setLocalVideo = (id: number) => 
     //     this.getVideoStream ()
@@ -83,17 +83,17 @@ export class WebRTCClient {
     //     }
 
     // }
+    
     public addCandidate(candidate: RTCIceCandidateInit) {
-        console.log('candidate:', candidate);
         return this.pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(err => console.log('error ice', err))
     }
     private getAudioStream = () =>  
         rx.Observable.from(navigator.mediaDevices.getUserMedia({audio: true, video: false}))
             .do(stream => stream.stop = () => stream.getTracks().forEach(track => track.stop()))
     
-    
-    private getVideoStream = () =>
-        rx.Observable.from(navigator.mediaDevices.getUserMedia({audio: false, video: true}))
+
+    private getVideoStream = (deviceId: string) =>
+        rx.Observable.from(navigator.mediaDevices.getUserMedia({audio: false, video: { deviceId }}))
             .do(stream => stream.stop = () => stream.getTracks().forEach(track => track.stop()))
     
 }

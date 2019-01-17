@@ -5,16 +5,22 @@ export class WebSocketAdapter {
     private ws? : WebSocket;
 
     private sessionId: number | null = null;
-    private seq = 0;
-
-    // private get transactionId() {
-    //     this.seq +=1
-    //     return new Date().getTime() + this.seq + "";
-    // }
 
     private readonly observable = new rx.Subject<JanusResponse> ();
 
     private preparedConnection = new rx.Subject();
+    
+    private keepAliveSubscroption = rx.Observable    
+    .interval(10000)
+    .do(() => {
+        if (this.ws){
+            this.send({
+                janus: 'keepalive',
+                transaction: v4()
+            })
+        }
+    })
+    .subscribe()
 
     public observer = this.observable
         .finally (()=> this.ws!.close)
@@ -62,13 +68,13 @@ export class WebSocketAdapter {
 
     public send = (data : any) => {
         const message = {
-            // transaction : this.transactionId,
             session_id : this.sessionId,
             ...data
         }
         this.ws!.send (JSON.stringify (message))
     }
     public close = () => {
+        this.keepAliveSubscroption.unsubscribe();
         this.ws!.close();
     }
     private connectWebSocket = () => this.createWebSocketObservable ()
