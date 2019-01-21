@@ -1,7 +1,7 @@
 import {from, Subscription, never} from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import React, { Component } from 'react';
-import { Button, message } from 'antd';
+import { Button, message, Card } from 'antd';
 const ButtonGroup = Button.Group;
 import {Participant} from '../../lib/Participant';
 import { WebRTCClient } from '../../lib/WebRTCClient';
@@ -48,7 +48,6 @@ export class ParticipantView extends Component<Props, State>{
         if (this.localVideoStream) {
             this.localVideoStream.stop()
         }
-        // this.subscribersListener.unsubscribe();
         if (this.subscribersListener) {
             this.subscribersListener.unsubscribe();
         }
@@ -73,59 +72,6 @@ export class ParticipantView extends Component<Props, State>{
             }
             )
             .subscribe();
-        // this.publish()
-
-        // this.getRoomPublishers();
-        // this.participant.create(this.props.roomId).subscribe();
-    
-        // this.subscribersListener = this.participant.subscribersPublisher
-        //     .map((obj) => {
-        //         const subscrubersKey = this.state.subscrubersKey + 1;
-
-        //         let videoTag:React.RefObject<HTMLVideoElement> = React.createRef();
-        //         obj.webRTC.pc.ontrack = (event: RTCTrackEvent) => {
-        //             let stream = new MediaStream();
-        //             stream.addTrack(event.track);
-        //             if (videoTag.current) {
-        //                 videoTag.current.srcObject = stream;
-        //             }
-        //         }
-        //         obj.webRTC.statePublisher
-        //             .do(target => {
-        //                 if (target.iceConnectionState === 'disconnected') {
-        //                     const subscriptions = this.state.subscriptions.filter(subscription => subscription.key != subscrubersKey);
-        //                     this.setState({
-        //                         ...this.state,
-        //                         subscriptions
-        //                     })
-        //                 }
-        //             })
-        //             .subscribe()
-
-        //         this.setState({
-        //             subscrubersKey,
-        //             subscriptions: [
-        //                 ...this.state.subscriptions,
-        //                 {   
-        //                     key: subscrubersKey,
-        //                     component: <Video key={this.state.subscrubersKey} title={`publisher: ${obj.publisher}`} statePublisher={obj.webRTC.statePublisher} videoTag={videoTag}/>,
-        //                     peerConntectoion: obj.webRTC
-        //                 }
-        //             ]
-        //         })
-        //     })
-        //     .subscribe();
-
-        // this.webrtcStateListener = this.participant.webrtcStatePublisher   
-        //     .do((target) => {
-        //         this.setState({
-        //             ...this.state,
-        //             iceconnectionstate: target.iceConnectionState,
-        //             icegatheringstate: target.iceGatheringState,
-        //             signalingstate: target.signalingState
-        //         })
-        //     })
-        //     .subscribe()
     }
     private getRoomPublishers = () =>  {
         const handeler = new JanusHandler(this.webSocket);
@@ -148,7 +94,6 @@ export class ParticipantView extends Component<Props, State>{
                         message.plugindata.data.participants.forEach(participant => {
                             if (participant.publisher) {
                                 this.addSubscriber(participant.id);
-                                // console.log(participant)
                             }
                         })
                     }
@@ -237,10 +182,6 @@ export class ParticipantView extends Component<Props, State>{
     private unpublish = () => {
         if (this.publisher) {
             this.publisher.unpublish();
-            // this.publisher = null;
-            // if (this.subscribersListener) {
-            //     this.subscribersListener.unsubscribe();
-            // }
         }
     }
     private publish = () => {
@@ -296,16 +237,15 @@ export class ParticipantView extends Component<Props, State>{
                     <Button disabled={!this.state.unpublished} size='small' type='dashed' onClick={this.publish}>Publish</Button>
                 </ButtonGroup>
             </div>
-            <div>
-               <div><strong>IceConnection state:</strong> {this.state.iceconnectionstate}</div>
-               <div><strong>Icegathering state:</strong> {this.state.icegatheringstate}</div>
-               <div><strong>Signaling state:</strong> {this.state.signalingstate}</div>
-            </div>
-
-            <h6>Local video</h6>
-            <video autoPlay style={{height: 50, width: 50}} ref={this.videoTag}></video>
-            <div className="subscriptions-container">
-                <h6>Remote video</h6>
+            <div style={{display:'grid'}}>
+                <Card size='small' title='Local video' style={{width:250}}>
+                    <div>
+                        <div><strong>IceConnection state:</strong> {this.state.iceconnectionstate}</div>
+                        <div><strong>Icegathering state:</strong> {this.state.icegatheringstate}</div>
+                        <div><strong>Signaling state:</strong> {this.state.signalingstate}</div>
+                    </div>
+                    <video autoPlay style={{height: 50, width: 50}} ref={this.videoTag}></video>
+                </Card>
                 {this.state.subscriptions.map(subscription => subscription.component)}
             </div>
         </div>

@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-import {Popover} from 'antd';
+import {Card} from 'antd';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
@@ -38,8 +38,9 @@ export class Video extends Component<Props> {
         </div>
     }
     render() {
-    return <Popover placement='rightBottom' title={this.props.title} content={this.state.statusContent} trigger="hover">
+    return <Card size='small' title={this.props.title} style={{width:250}}>
+            {this.state.statusContent}
             <video autoPlay style={{height: 50, width: 50}} ref={this.props.videoTag} />
-        </Popover>
+        </Card>
     }
 }

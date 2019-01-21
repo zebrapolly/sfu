@@ -22,7 +22,7 @@ export class Room {
             this.connection.send ({
                 body: {
                     request: 'create',
-                    publishers: 1
+                    publishers: 4
                 }
             })
         )
