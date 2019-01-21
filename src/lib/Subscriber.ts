@@ -44,31 +44,10 @@ export class Subscriber {
     
         .flatMap(message => {
             if (message.janus == 'event') {
-                if (message.plugindata.data.videoroom == 'attached') {                    
+                if (message.plugindata.data.videoroom == 'attached') {                   
                     this.webRTCClient = new WebRTCClient();
-                    rx.Observable.of(this.webRTCClient)
-                        .flatMap(webRTC => webRTC.pc.setRemoteDescription (message.jsep))
-                        .flatMap(() => 
-                            rx.Observable.from(this.webRTCClient!.pc.createAnswer({
-                                offerToReceiveVideo : true,
-                                offerToReceiveAudio : true
-                            }))
-                            .do(answer => this.janusHandler.send({
-                                body : {
-                                    request: "start",
-                                    room : this.roomId,
-                                    video: true,
-                                    audio: true
-                                },
-                                jsep : {
-                                    type : "answer",
-                                    sdp : answer.sdp
-                                }
-                            })
-                        ))
-                        .do(answer => this.webRTCClient!.pc.setLocalDescription (answer))
-                        .subscribe()
 
+                    this.webRTCWork(message.jsep);
                     this.webRTCClient.pc.onicecandidate = ice => {
 
                         if (ice.candidate != null) {
@@ -84,8 +63,34 @@ export class Subscriber {
                         webRTC: this.webRTCClient,
                         publisher: message.plugindata.data.display
                     });
+                } else if (message.plugindata.data.configured == 'ok') {
+                    this.webRTCWork(message.jsep);
                 }
             }
             return rx.Observable.never();
         })
+    private webRTCWork = (jsep: any) => {
+        rx.Observable.of(this.webRTCClient)
+        .flatMap(webRTC => webRTC!.pc.setRemoteDescription (jsep))
+        .flatMap(() => 
+            rx.Observable.from(this.webRTCClient!.pc.createAnswer({
+                offerToReceiveVideo : true,
+                offerToReceiveAudio : true
+            }))
+            .do(answer => this.janusHandler.send({
+                body : {
+                    request: "start",
+                    room : this.roomId,
+                    video: true,
+                    audio: true
+                },
+                jsep : {
+                    type : "answer",
+                    sdp : answer.sdp
+                }
+            })
+        ))
+        .do(answer => this.webRTCClient!.pc.setLocalDescription (answer))
+        .subscribe()
+    }
 }

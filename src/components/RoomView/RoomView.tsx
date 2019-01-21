@@ -71,7 +71,6 @@ export class RoomView extends Component<Props, State> {
             });
         }
         else {
-            console.log('room doesn\'t create');
         }
     }
     private getDevices = () => {
@@ -114,13 +113,13 @@ export class RoomView extends Component<Props, State> {
         return <div>
             {this.state.buttonEnabled && 
             <div>
-                <Button size='small' style={{marginLeft: '5px'}} onClick={this.createParticipant}>Create Participant</Button>
+                <Button size='small' style={{marginLeft: 5}} onClick={this.createParticipant}>Create Participant</Button>
                 <Select size='small' onChange={this.selecteChangeHandle} defaultValue={this.state.selectedDeviceId} style={{ width: '320px', marginLeft: '5px' }}>
                     {this.state.devices.map(device => device)}
                 </Select>
             </div>}
                 
-            <Collapse onChange={this.onChangeActivePanel} activeKey={this.state.activePanels} style={{marginTop: '10px'}} className="room-container">
+            <Collapse onChange={this.onChangeActivePanel} activeKey={this.state.activePanels} style={{marginTop: 10}} className="room-container">
                 {this.state.participants.map(participant => participant.component)}
             </Collapse>
         </div>

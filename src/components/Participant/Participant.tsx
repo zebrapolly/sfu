@@ -1,9 +1,8 @@
 import {from, Subscription, never} from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import React, { Component } from 'react';
-import { Button, message, Card } from 'antd';
+import { Button, Switch } from 'antd';
 const ButtonGroup = Button.Group;
-import {Participant} from '../../lib/Participant';
 import { WebRTCClient } from '../../lib/WebRTCClient';
 
 import {Video} from '../Video/Video';
@@ -21,8 +20,8 @@ interface Props {
 
 interface State {
     unpublished: boolean
-
-
+    audio: boolean
+    video: boolean
     subscrubersKey: number
     connectionstate?: string
     iceconnectionstate?: string
@@ -57,14 +56,18 @@ export class ParticipantView extends Component<Props, State>{
     }
     videoTag:React.RefObject<HTMLVideoElement>;
     state: State = {
+        audio: true,
+        video: false,
         unpublished: true,
         subscrubersKey: 0,
         subscriptions: []
     }
     constructor(props: Props) {
         super(props);
-        this.setLocalVideo().subscribe();
+        
         this.videoTag = React.createRef();
+        this.setLocalVideo().subscribe();
+
         this.webSocket.connect()
             .do(() => {
                 this.getRoomPublishers();
@@ -211,11 +214,13 @@ export class ParticipantView extends Component<Props, State>{
                 .do(state => {
                     console.log('state', state)
                     if (state === 'publishing') {
+
                         this.setState({
                             ...this.state,
                             unpublished: false
                         })
                     } else if (state == 'unpublished') {
+                        this.localVideoStream!.stop()
                         this.setState({
                             ...this.state,
                             unpublished: true
@@ -228,26 +233,46 @@ export class ParticipantView extends Component<Props, State>{
         }
 
     }
+    private toggleVideo = (checked: boolean) => {
+        this.setState({
+            ...this.state,
+            video: checked
+        })
+        if (this.publisher) {
+            this.publisher.configure(
+                this.state.audio,
+                checked
+            )
+        }
+    }
+    private toggleAudio = (checked: boolean) => {
+        this.setState({
+            ...this.state,
+            audio: checked
+        })
+        if (this.publisher) {
+            this.publisher.configure(
+                checked,
+                this.state.video
+            )
+        }
+    }
     render() {
         return <div>
-            <div>
-                <ButtonGroup>
+            <div style={{display:'flex'}}>
+                <ButtonGroup style={{marginBottom: '5px'}}>
                     <Button size='small' type='danger' onClick={this.leaveRoom}>Leave Room</Button>
                     <Button disabled={this.state.unpublished} size='small' type='dashed' onClick={this.unpublish}>Unpublish</Button>
                     <Button disabled={!this.state.unpublished} size='small' type='dashed' onClick={this.publish}>Publish</Button>
                 </ButtonGroup>
+                <Switch checkedChildren='Video' defaultChecked={this.state.video} onChange={this.toggleVideo} unCheckedChildren="Video" style={{marginLeft: 5}}/>
+                <Switch checkedChildren='Audio' defaultChecked={this.state.audio} onChange={this.toggleAudio} unCheckedChildren="Audio" style={{marginLeft: 5}}/>
             </div>
-            <div style={{display:'grid'}}>
-                <Card size='small' title='Local video' style={{width:250}}>
-                    <div>
-                        <div><strong>IceConnection state:</strong> {this.state.iceconnectionstate}</div>
-                        <div><strong>Icegathering state:</strong> {this.state.icegatheringstate}</div>
-                        <div><strong>Signaling state:</strong> {this.state.signalingstate}</div>
-                    </div>
-                    <video autoPlay style={{height: 50, width: 50}} ref={this.videoTag}></video>
-                </Card>
+            <div style={{display:'flex'}}>
+                {this.publisher && <Video title='Local video' videoTag={this.videoTag} statePublisher={this.publisher.webrtcStateBus}/>}
                 {this.state.subscriptions.map(subscription => subscription.component)}
             </div>
+
         </div>
     }
 }

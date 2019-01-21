@@ -49,12 +49,8 @@ export class Publisher {
                         this.publish();
                     } else if (message.plugindata.data.configured == 'ok') {
                         if (this.webRTCClient) {
-                            if (!this.webRTCClient.pc.remoteDescription) {
                                 return rx.Observable.from(this.webRTCClient.pc.setRemoteDescription (message.jsep))
                                 .map(() => 'publishing')
-                            } else {
-                                return rx.Observable.of('publishing')
-                            }
                         }
                     } else if (message.plugindata.data.unpublished === 'ok') {
                         return rx.Observable.of('unpublished');
@@ -80,9 +76,33 @@ export class Publisher {
             this.webRTCClient = null;
         }
     }
+    public configure(audio: boolean, video: boolean) {
+        if (this.webRTCClient) {
+            this.webRTCClient.configure(audio, video, this.deviceId).
+            flatMap(() => rx.Observable.from(this.webRTCClient!.pc.createOffer({
+                offerToReceiveVideo : video,
+                offerToReceiveAudio : audio
+            }))
+            .do(offer => {
+                this.janusHandler.send({
+                    body : {
+                        request: "configure",
+                        audio,
+                        video,
+                        display: 'participant ' + this.id 
+                    },
+                    jsep : {
+                        type : "offer",
+                        sdp : offer.sdp
+                    }
+                })
+            })
+            .do(answer => this.webRTCClient!.pc.setLocalDescription (answer)))
+        .subscribe();
+        }
+    }
     public publish = () => {
         if (this.webRTCClient) {
-            console.log('herereere')
             rx.Observable.of({})
                 .do(() => {
                     this.janusHandler.send({
@@ -101,7 +121,7 @@ export class Publisher {
             this.webRTCClient.create(this.deviceId)
                 .flatMap(() => 
                     rx.Observable.from(this.webRTCClient!.pc.createOffer({
-                        offerToReceiveVideo : true,
+                        // offerToReceiveVideo : true,
                         offerToReceiveAudio : true
                     })))
                     .do(offer => {
@@ -109,7 +129,7 @@ export class Publisher {
                             body : {
                                 request: "configure",
                                 audio : true,
-                                video: true,
+                                // video: true,
                                 display: 'participant ' + this.id 
                             },
                             jsep : {

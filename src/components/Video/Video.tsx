@@ -38,7 +38,7 @@ export class Video extends Component<Props> {
         </div>
     }
     render() {
-    return <Card size='small' title={this.props.title} style={{width:250}}>
+    return <Card size='small' title={this.props.title} style={{width:300, marginRight: 5}}>
             {this.state.statusContent}
             <video autoPlay style={{height: 50, width: 50}} ref={this.props.videoTag} />
         </Card>
