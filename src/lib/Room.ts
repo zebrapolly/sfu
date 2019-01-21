@@ -1,7 +1,7 @@
 import * as rx from "rxjs/Rx"
 
 import {JanusResponse} from "./janus/JanusResponse";
-import {JanusClient} from "./janus/JanusClient";
+import {JanusHandler} from "./janus/JanusHandler";
 import { WebSocketAdapter } from "./janus/WebSocketAdapter";
 import { never } from "rxjs";
 
@@ -9,10 +9,10 @@ export class Room {
     
     public roomId : number | null= null;
     private readonly webSocket = new WebSocketAdapter(this.url, 'janus-protocol');
-    private connection: JanusClient;
+    private connection: JanusHandler;
     
     constructor(private readonly url: string) {
-        this.connection = new JanusClient (this.webSocket);
+        this.connection = new JanusHandler (this.webSocket);
     }
 
     public create = () => rx.Observable.of (this.connection)
@@ -22,7 +22,7 @@ export class Room {
             this.connection.send ({
                 body: {
                     request: 'create',
-                    publishers: 3
+                    publishers: 1
                 }
             })
         )
@@ -35,7 +35,7 @@ export class Room {
                 this.connection.send ({
                     body: {
                         request: 'destroy',
-                        publishers: 6,
+                        publishers: 1,
                         room: this.roomId
                     }
                 })

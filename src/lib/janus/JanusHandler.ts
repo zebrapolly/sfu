@@ -5,7 +5,7 @@ import { JanusResponse } from "./JanusResponse";
 import { Subject } from "rxjs/Rx";
 import { v4 } from "uuid";
 
-export class JanusClient {
+export class JanusHandler {
 
     private handleId: number | null = null;
     
@@ -16,7 +16,6 @@ export class JanusClient {
     constructor(private readonly webSocket: WebSocketAdapter) {
         webSocket.observer
             .flatMap((message: JanusResponse) => {
-                console.log('message.transaction', this.handleId, message.transaction, this.transactions.has(message.transaction))
                 if (message.transaction) {
                     if (!this.transactions.has(message.transaction)) {
                         return rx.Observable.never();

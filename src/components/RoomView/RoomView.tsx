@@ -1,7 +1,7 @@
 import { Subject } from 'rxjs';
 import React, { Component } from 'react';
 import { Button, Collapse, Select, message } from 'antd';
-import { ParticipantView } from '../ParticipantView/ParticipantView';
+import { ParticipantView } from '../Participant/Participant';
 import {Room} from '../../lib/Room';
 
 const Option = Select.Option;
@@ -31,7 +31,7 @@ export class RoomView extends Component<Props, State> {
     private room: Room;
     private roomId: number | null = null;
     state = initState;
-    
+
     constructor(props: Props) {
         super(props);
         this.room = new Room('ws://localhost:8090/');

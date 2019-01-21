@@ -1,6 +1,5 @@
 import * as rx from 'rxjs/Rx';
-import { merge, zip, fromEventPattern, of, never, Observable } from 'rxjs';
-import { tap, map, filter, flatMap } from 'rxjs/operators';
+import { merge, zip, fromEventPattern } from 'rxjs';
 
 const iceServers: RTCIceServer[] = [
     {
@@ -36,9 +35,12 @@ export class WebRTCClient {
     //         return never();
     //     }),
     // )
-
-    public create = (deviceId: string) =>
-        zip(
+        constructor() {
+            console.log('create WebRTCClient instance')
+        }
+    public create = (deviceId: string) => {
+        console.log('deviceId', deviceId);
+        return zip(
             this.getAudioStream()
                 .map(stream => stream.getTracks())
                 .map(track => this.pc.addTrack(track[0])),
@@ -47,6 +49,8 @@ export class WebRTCClient {
                 .map(track => this.pc.addTrack(track[0])),
         )
 
+    }
+ 
         // .do(() => {
 
         //     this.pc.onconnectionstatechange = ()=> console.log (" PC.onconnectionstatechange : " + this.pc.connectionState)

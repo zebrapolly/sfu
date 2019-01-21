@@ -16,10 +16,13 @@ export interface JanusResponse {
             display: string
             publishers: Array<Participant>
             participants: Array<Participant>
+            error_code: number
+            configured: string
+            unpublished: string
         }
     },
     jsep: RTCSessionDescriptionInit
-    candidate?: RTCIceCandidate & {
+    candidate?: RTCIceCandidateInit & {
         completed: boolean
     }
 }
