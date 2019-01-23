@@ -43,6 +43,7 @@ export class ParticipantView extends Component<Props, State>{
     private publisher: Publisher | null = null;
     private subscribersListener: Subscription | null = null;
     private webrtcStateListener: Subscription | null = null;
+
     componentWillUnmount = () => {
         if (this.localVideoStream) {
             this.localVideoStream.stop()
@@ -66,7 +67,7 @@ export class ParticipantView extends Component<Props, State>{
         super(props);
         
         this.videoTag = React.createRef();
-        this.setLocalVideo().subscribe();
+       
 
         this.webSocket.connect()
             .do(() => {
@@ -106,6 +107,15 @@ export class ParticipantView extends Component<Props, State>{
             .subscribe();
 
     }
+    private destoySubscriber = (subscrubersKey: number) => {
+        console.log('subscrubersKey', subscrubersKey, this.state)
+        const subscriptions = this.state.subscriptions.filter(subscription => subscription.key != subscrubersKey);
+        this.setState({
+            ...this.state,
+            subscriptions
+        })
+    }
+
     private addSubscriber = (participantId: number) => {
         const subscriber = new Subscriber(this.webSocket, participantId, this.props.roomId);
         subscriber.subscriberStateBus
@@ -120,17 +130,6 @@ export class ParticipantView extends Component<Props, State>{
                     videoTag.current.srcObject = stream;
                 }
             }
-            obj.webRTC.statePublisher
-                .do(target => {
-                    if (target.iceConnectionState === 'disconnected') {
-                        const subscriptions = this.state.subscriptions.filter(subscription => subscription.key != subscrubersKey);
-                        this.setState({
-                            ...this.state,
-                            subscriptions
-                        })
-                    }
-                })
-                .subscribe()
 
             this.setState({
                 subscrubersKey,
@@ -138,7 +137,7 @@ export class ParticipantView extends Component<Props, State>{
                     ...this.state.subscriptions,
                     {   
                         key: subscrubersKey,
-                        component: <Video key={this.state.subscrubersKey} title={`publisher: ${obj.publisher}`} statePublisher={obj.webRTC.statePublisher} videoTag={videoTag}/>,
+                        component: <Video onDestroy={this.destoySubscriber} key={this.state.subscrubersKey} title={`publisher: ${obj.publisher}`} statePublisher={obj.webRTC.statePublisher} videoTag={videoTag}/>,
                         peerConntectoion: obj.webRTC
                     }
                 ]
@@ -215,11 +214,22 @@ export class ParticipantView extends Component<Props, State>{
                     console.log('state', state)
                     if (state === 'publishing') {
 
+                        if (this.localVideoStream) {
+                            if (!this.localVideoStream.active) {
+                                this.setLocalVideo().subscribe()
+                            }
+                        } else {
+                            this.setLocalVideo().subscribe()
+                        }
+                            
+
                         this.setState({
                             ...this.state,
                             unpublished: false
                         })
                     } else if (state == 'unpublished') {
+
+
                         this.localVideoStream!.stop()
                         this.setState({
                             ...this.state,

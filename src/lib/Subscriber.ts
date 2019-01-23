@@ -66,6 +66,8 @@ export class Subscriber {
                 } else if (message.plugindata.data.configured == 'ok') {
                     this.webRTCWork(message.jsep);
                 }
+            } else if (message.janus == 'hangup') {
+                console.log('hangup')
             }
             return rx.Observable.never();
         })

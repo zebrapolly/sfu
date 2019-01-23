@@ -80,7 +80,7 @@ export class RoomView extends Component<Props, State> {
         let devices: any[] = [];
         mediaDevices.forEach((device) => {
             if (device.kind === 'videoinput') {
-                if (device.label.indexOf('FaceTime HD Camera') !== -1) {
+                if (device.label.indexOf('FaceTime') !== -1) {
                     this.setState({
                         ...this.state,
                         selectedDeviceId: device.deviceId
