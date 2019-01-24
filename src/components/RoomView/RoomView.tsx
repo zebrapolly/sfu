@@ -10,7 +10,7 @@ const Panel = Collapse.Panel;
 const initState: State = {
     key: 0,
     participants: [],
-    buttonEnabled: false,
+    buttonEnabled: true,
     activePanels: [],
     devices: [],
 }
@@ -24,25 +24,37 @@ interface State {
     activePanels: Array<string>
 }
 interface Props {
-    publisher: Subject<number>
+    publisher?: Subject<number>
+    roomType: string
+    roomId?: number
 }
 
 export class RoomView extends Component<Props, State> {
-    private room: Room;
-    private roomId: number | null = null;
+    private room?: Room;
+    private roomId?: number;
     state = initState;
 
     constructor(props: Props) {
         super(props);
+        this.getDevices()
+        if (props.roomType == 'created') {
+            this.startNewRoom();
+        }
+        if (props.roomType == 'joined') {
+            this.roomId = this.props.roomId;
+            // this.state = {buttonEnabled: true}
+        }
+    }
+
+    public startNewRoom = () => {
+        console.log('starting new room');
         this.room = new Room('ws://localhost:8090/');
         this.room.create()
             .do(roomId => this.roomId = roomId)
             .do(() => this.setState({buttonEnabled: true}))
-            .subscribe(props.publisher);
-
-        this.getDevices()
+            .subscribe(this.props.publisher);
     }
-    
+
     private unMountParticipant = (id: number) => {
         const participants = this.state.participants.filter(participant => participant.key != id)
         this.setState({
@@ -76,7 +88,6 @@ export class RoomView extends Component<Props, State> {
     private getDevices = () => {
         navigator.mediaDevices.enumerateDevices()
         .then((mediaDevices) => {
-        console.log('devices', mediaDevices);
         let devices: any[] = [];
         mediaDevices.forEach((device) => {
             if (device.kind === 'videoinput') {
@@ -95,7 +106,9 @@ export class RoomView extends Component<Props, State> {
         })
     }
     componentWillUnmount = () => {
-        this.room.close().subscribe();
+        if (this.room) {
+            this.room.close().subscribe();
+        }
     }
     private onChangeActivePanel = (activePanels: any) => {
         this.setState({
@@ -119,7 +132,7 @@ export class RoomView extends Component<Props, State> {
                 </Select>
             </div>}
                 
-            <Collapse onChange={this.onChangeActivePanel} activeKey={this.state.activePanels} style={{marginTop: 10}} className="room-container">
+            <Collapse onChange={this.onChangeActivePanel} activeKey={this.state.activePanels} style={{marginTop: 10}}>
                 {this.state.participants.map(participant => participant.component)}
             </Collapse>
         </div>

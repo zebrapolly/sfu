@@ -8,11 +8,9 @@ interface State {
 }
 
 interface Props {
-    key?: number
     statePublisher: Observable<RTCPeerConnection>
     videoTag: React.RefObject<HTMLVideoElement>
     title: string
-    onDestroy?: (subKey: number) => void
 }
 
 
@@ -23,10 +21,6 @@ export class Video extends Component<Props> {
     stateSubscription = this.props.statePublisher
     .pipe(
         tap(target => {
-            console.log(target, this.props.key);
-            if (this.props.key && this.props.onDestroy) {
-                this.props.onDestroy(this.props.key)
-            }
             this.setState({
                 statusContent: this.createStatusContent(target)
             })

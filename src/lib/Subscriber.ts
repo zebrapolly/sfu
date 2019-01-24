@@ -6,16 +6,13 @@ import { WebSocketAdapter } from './janus/WebSocketAdapter';
 import { JanusResponse } from './janus/JanusResponse';
 
 export class Subscriber {
-    private webRTCClient: WebRTCClient | null = null;
+    public webRTCClient: WebRTCClient | null = null;
     public webrtcStateBus = new rx.Subject<RTCPeerConnection>();
 
     private janusHandler  = new JanusHandler (this.webSocket);
     private handlerSubscription: rx.Subscription | null = null;
-
-    public subscriberStateBus = new rx.Subject<{
-        webRTC: WebRTCClient,
-        publisher: string
-    }>();
+    public publisher: string = '';
+    public subscriberStateBus = new rx.Subject<string>();
 
     constructor(
         private webSocket: WebSocketAdapter,
@@ -59,15 +56,14 @@ export class Subscriber {
 
                         }
                     }
-                    return rx.Observable.of({
-                        webRTC: this.webRTCClient,
-                        publisher: message.plugindata.data.display
-                    });
+                    this.publisher = message.plugindata.data.display;
+                    return rx.Observable.of('subscribed')
                 } else if (message.plugindata.data.configured == 'ok') {
                     this.webRTCWork(message.jsep);
                 }
             } else if (message.janus == 'hangup') {
-                console.log('hangup')
+                console.log('message.janus', message.janus)
+                return rx.Observable.of('hangup');
             }
             return rx.Observable.never();
         })

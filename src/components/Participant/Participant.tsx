@@ -1,7 +1,7 @@
 import {from, Subscription, never} from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import React, { Component } from 'react';
-import { Button, Switch } from 'antd';
+import { Button, Switch, message } from 'antd';
 const ButtonGroup = Button.Group;
 import { WebRTCClient } from '../../lib/WebRTCClient';
 
@@ -92,7 +92,6 @@ export class ParticipantView extends Component<Props, State>{
 
         handeler.publisher
             .flatMap(message => {
-                console.log('message from getRoomPublishers', message)
                 if (message.janus == 'success') {
                     if ((message.plugindata) &&(message.plugindata.data.videoroom == 'participants') && (message.plugindata.data.participants)) {
                         message.plugindata.data.participants.forEach(participant => {
@@ -107,44 +106,50 @@ export class ParticipantView extends Component<Props, State>{
             .subscribe();
 
     }
-    private destoySubscriber = (subscrubersKey: number) => {
-        console.log('subscrubersKey', subscrubersKey, this.state)
-        const subscriptions = this.state.subscriptions.filter(subscription => subscription.key != subscrubersKey);
-        this.setState({
-            ...this.state,
-            subscriptions
-        })
-    }
-
     private addSubscriber = (participantId: number) => {
         const subscriber = new Subscriber(this.webSocket, participantId, this.props.roomId);
+        const subscrubersKey = this.state.subscrubersKey + 1;
+        this.setState({
+            ...this.state,
+            subscrubersKey
+        })
+        console.log('subscrubersKey', subscrubersKey);
         subscriber.subscriberStateBus
-        .do(obj => {
-            const subscrubersKey = this.state.subscrubersKey + 1;
-
-            let videoTag:React.RefObject<HTMLVideoElement> = React.createRef();
-            obj.webRTC.pc.ontrack = (event: RTCTrackEvent) => {
-                let stream = new MediaStream();
-                stream.addTrack(event.track);
-                if (videoTag.current) {
-                    videoTag.current.srcObject = stream;
-                }
-            }
-
-            this.setState({
-                subscrubersKey,
-                subscriptions: [
-                    ...this.state.subscriptions,
-                    {   
-                        key: subscrubersKey,
-                        component: <Video onDestroy={this.destoySubscriber} key={this.state.subscrubersKey} title={`publisher: ${obj.publisher}`} statePublisher={obj.webRTC.statePublisher} videoTag={videoTag}/>,
-                        peerConntectoion: obj.webRTC
+        .do(status => {
+            if (status == 'subscribed') {
+                const webRTCClient = subscriber.webRTCClient!;
+                const statePublisher = webRTCClient.statePublisher;
+                
+                let videoTag:React.RefObject<HTMLVideoElement> = React.createRef();
+                webRTCClient.pc.ontrack = (event: RTCTrackEvent) => {
+                    let stream = new MediaStream();
+                    stream.addTrack(event.track);
+                    if (videoTag.current) {
+                        videoTag.current.srcObject = stream;
                     }
-                ]
-            })
+                }
+
+                this.setState({
+                    // subscrubersKey,
+                    subscriptions: [
+                        ...this.state.subscriptions,
+                        {   
+                            key: subscrubersKey,
+                            component: <Video key={subscrubersKey} title={`publisher: ${subscriber.publisher}`} statePublisher={statePublisher} videoTag={videoTag}/>,
+                            peerConntectoion: webRTCClient
+                        }
+                    ]
+                })
+            } else if (status == 'hangup') {
+                const subscriptions = this.state.subscriptions.filter(subscription => subscription.key != subscrubersKey);
+                this.setState({
+                    ...this.state,
+                    subscriptions
+                })
+            }
         })
         .subscribe();
-
+    
     }
     public setLocalVideo = () => {
         return this.getVideoStream ()
@@ -187,6 +192,11 @@ export class ParticipantView extends Component<Props, State>{
         }
     }
     private publish = () => {
+        console.log('this.state.audio, this.state.video', this.state.audio, this.state.video)
+        if (!this.state.audio && !this.state.video) {
+            message.error('You shoul publish something')
+            return;
+        }
         if (!this.publisher) {
             this.publisher = new Publisher(
                 this.webSocket,
@@ -194,6 +204,7 @@ export class ParticipantView extends Component<Props, State>{
                 this.props.deviceId,
                 this.props.roomId
             )
+            this.publisher.publish(this.state.audio, this.state.video);
             this.subscribersListener = this.publisher.subscribersPublisher
                 .do(publisherId => this.addSubscriber(publisherId))
                 .subscribe();
@@ -211,7 +222,6 @@ export class ParticipantView extends Component<Props, State>{
     
             this.publisher.publisherStateBus
                 .do(state => {
-                    console.log('state', state)
                     if (state === 'publishing') {
 
                         if (this.localVideoStream) {
@@ -237,9 +247,12 @@ export class ParticipantView extends Component<Props, State>{
                         })
                     }
                 })
-                .subscribe((x) => console.log('publisher', x))
+                .subscribe();
         } else {
-            this.publisher.publish();
+            this.publisher.publish(
+                this.state.audio,
+                this.state.video
+            );
         }
 
     }
@@ -254,17 +267,36 @@ export class ParticipantView extends Component<Props, State>{
                 checked
             )
         }
+        if (!this.state.audio && checked == false) {
+            this.setState({
+                ...this.state,
+                video: checked,
+                unpublished: true
+            })             
+        }
+
     }
     private toggleAudio = (checked: boolean) => {
+        console.log('toggleAudio',  checked, this.state);
+
         this.setState({
             ...this.state,
             audio: checked
         })
+        console.log('toggleAudio after', this.state);
+
         if (this.publisher) {
             this.publisher.configure(
                 checked,
                 this.state.video
             )
+        }
+        if (!this.state.video && checked == false) {
+            this.setState({
+                ...this.state,
+                audio: checked,
+                unpublished: true
+            })        
         }
     }
     render() {

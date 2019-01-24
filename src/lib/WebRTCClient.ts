@@ -19,7 +19,8 @@ export class WebRTCClient {
     public pc = new RTCPeerConnection ({
         iceServers : iceServers
     });
-    
+    private audio: boolean = false;
+    private video: boolean = false;
     constructor() {
         console.log('create WebRTCClient instance')
     }
@@ -29,38 +30,74 @@ export class WebRTCClient {
         fromEventPattern<RTCPeerConnection>(handler => this.pc.oniceconnectionstatechange = event => handler(event.target)),
         fromEventPattern<RTCPeerConnection>(handler => this.pc.onicegatheringstatechange = event => handler(event.target)),
         fromEventPattern<RTCPeerConnection>(handler => this.pc.onsignalingstatechange = event => handler(event.target)),
-    )
+    ).share();
 
-    public create = (deviceId: string) => {
-        return zip(
-            this.getAudioStream(deviceId)
-                .map(stream => stream.getTracks())
-                .map(track => this.pc.addTrack(track[0])),
-            // this.getVideoStream(deviceId)
-            //     .map(stream => stream.getTracks())
-            //     .map(track => this.pc.addTrack(track[0])),
-        )
+    // public create = (deviceId: string) => {
+    //     return zip(
+    //         this.getAudioStream(deviceId)
+    //             .map(stream => stream.getTracks())
+    //             .map(track => this.pc.addTrack(track[0])),
+    //         // this.getVideoStream(deviceId)
+    //         //     .map(stream => stream.getTracks())
+    //         //     .map(track => this.pc.addTrack(track[0])),
+    //     )
 
-    }
-    public configure = (audio?: boolean, video?: boolean, deviceId?: string) => {
+    // }
+    public configure = (audio: boolean, video: boolean, deviceId?: string) => {
         console.log(this.pc.getSenders());
-        if (video && deviceId) {
-            return this.getVideoStream(deviceId)
-                .map(stream => stream.getTracks())
-                .map(track => this.pc.addTrack(track[0]))
+        let res = rx.Observable.of({});
+        if (video && !this.video && deviceId) {
+            res = res.zip(
+                this.getVideoStream(deviceId)
+                    .map(stream => stream.getTracks())
+                    .map(track => this.pc.addTrack(track[0]))
+            )
         }
-        if (!video) {
-            console.log('configure', audio, video, deviceId)
-
+        if (!video && this.video) {
             const senders = this.pc.getSenders();
+            console.log('sender', senders)
+
             senders.forEach(sender => {
                 if (sender.track!.kind == 'video') {
+                    sender.track!.stop();
+
                     this.pc.removeTrack(sender);
                 }
             })
-            return rx.Observable.of({});
         }
-        return rx.Observable.never();
+
+        if (audio && !this.audio) {
+            res = res.zip(
+                this.getAudioStream()
+                    .map(stream => stream.getTracks())
+                    .map(track => this.pc.addTrack(track[0]))
+            )
+   
+        }
+
+        if (!audio && this.audio) {
+            const senders = this.pc.getSenders();
+            console.log('sender', senders)
+
+            senders.forEach(sender => {
+                if (sender.track!.kind == 'audio') {
+                    sender.track!.stop();
+                }
+            })
+        }
+        // if (audio && video && !this.audio && !this.video && deviceId) {
+        //     return zip(
+        //         this.getAudioStream()
+        //             .map(stream => stream.getTracks())
+        //             .map(track => this.pc.addTrack(track[0])),
+        //         this.getVideoStream(deviceId)
+        //             .map(stream => stream.getTracks())
+        //             .map(track => this.pc.addTrack(track[0])),
+        //     )
+        // }
+        this.audio = audio;
+        this.video = video;
+        return res
         // const 
         // this.pc.get()
         // return zip(
@@ -75,8 +112,8 @@ export class WebRTCClient {
     public addCandidate(candidate: RTCIceCandidateInit) {
         return this.pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(err => console.log('error ice', err))
     }
-    private getAudioStream = (deviceId: string) =>  
-        rx.Observable.from(navigator.mediaDevices.getUserMedia({audio:  { deviceId }, video: false}))
+    private getAudioStream = () =>  
+        rx.Observable.from(navigator.mediaDevices.getUserMedia({audio: true, video: false}))
             .do(stream => stream.stop = () => stream.getTracks().forEach(track => track.stop()))
     
 
