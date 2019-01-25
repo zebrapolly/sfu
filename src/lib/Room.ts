@@ -27,7 +27,8 @@ export class Room {
             })
         )
         .flatMap(() => this.connection.publisher
-        .flatMap(this.onMessage))
+            .flatMap(this.onMessage)
+        )
 
     public close = () => {
         return rx.Observable.of({})

@@ -1,8 +1,9 @@
 import {from, Subscription, never} from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import React, { Component } from 'react';
-import { Button, Switch, message } from 'antd';
+import { Button, Switch, message, Input } from 'antd';
 const ButtonGroup = Button.Group;
+const Search = Input.Search;
 import { WebRTCClient } from '../../lib/WebRTCClient';
 
 import {Video} from '../Video/Video';
@@ -113,7 +114,6 @@ export class ParticipantView extends Component<Props, State>{
             ...this.state,
             subscrubersKey
         })
-        console.log('subscrubersKey', subscrubersKey);
         subscriber.subscriberStateBus
         .do(status => {
             if (status == 'subscribed') {
@@ -299,6 +299,15 @@ export class ParticipantView extends Component<Props, State>{
             })        
         }
     }
+    private editNumberOfPublishers = (number: string) => {
+            const numberParam = +number;
+            if (this.publisher) {
+                this.publisher.configureRoom({
+                    new_publishers: numberParam
+                });
+            }
+
+    }
     render() {
         return <div>
             <div style={{display:'flex'}}>
@@ -306,6 +315,8 @@ export class ParticipantView extends Component<Props, State>{
                     <Button size='small' type='danger' onClick={this.leaveRoom}>Leave Room</Button>
                     <Button disabled={this.state.unpublished} size='small' type='dashed' onClick={this.unpublish}>Unpublish</Button>
                     <Button disabled={!this.state.unpublished} size='small' type='dashed' onClick={this.publish}>Publish</Button>
+                    <Search size='small' style={{margin: '5px', width: 200 }} enterButton="Join" placeholder="input room id" onSearch={this.editNumberOfPublishers}/>
+
                 </ButtonGroup>
                 <Switch checkedChildren='Video' defaultChecked={this.state.video} onChange={this.toggleVideo} unCheckedChildren="Video" style={{marginLeft: 5}}/>
                 <Switch checkedChildren='Audio' defaultChecked={this.state.audio} onChange={this.toggleAudio} unCheckedChildren="Audio" style={{marginLeft: 5}}/>

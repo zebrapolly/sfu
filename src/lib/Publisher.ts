@@ -21,7 +21,7 @@ export class Publisher {
         private webSocket: WebSocketAdapter,
         private id: number,
         private deviceId: string,
-        roomId: number
+        private roomId: number
         ) {
         this.janusHandler.connect()
             .do(() => this.janusHandler.send({
@@ -75,6 +75,22 @@ export class Publisher {
             this.webRTCClient.pc.close();
             this.webRTCClient = null;
         }
+    }
+    public configureRoom = (params: {
+        new_publishers: number
+    }) => {
+        this.janusHandler.send({
+            body : {
+                request: "edit",
+                room: this.roomId,
+                new_publishers: params.new_publishers
+            }
+        })
+        this.janusHandler.send({
+            body: {
+                request: 'list'
+            }
+        })
     }
     public configure(audio: boolean, video: boolean) {
         if (this.webRTCClient) {
@@ -152,11 +168,5 @@ export class Publisher {
             }
         }
 
-    }
-    public deletePublisher = () => {
-        if (this.handlerSubscription) {
-            this.handlerSubscription.unsubscribe();
-        }
-        
     }
 }
