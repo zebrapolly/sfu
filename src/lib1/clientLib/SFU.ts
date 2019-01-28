@@ -25,11 +25,24 @@ class SFU implements ClientLib.SFU {
     public createConversation = (publisherStream: MediaStream) => {
         return this.addTrack(publisherStream)
             .pipe(
-                flatMap(() => this.pc.createOffer({
+                flatMap(() => from(this.pc.createOffer({
                     offerToReceiveVideo : true,
-                    offerToReceiveAudio : true
-                })),
+                    // offerToReceiveAudio : true
+                }))),
+                flatMap(offer => {
+                    return from(this.pc.setLocalDescription(offer))
+                        .map(() => offer);
+                }),
                 map(offer => offer.sdp),
+                flatMap(sdp => server.createConversation({
+                    sdp,
+                    // audio,
+                    // video,
+                    // pin
+                })),
+                tap((sdp) => console.log('sdp', sdp)),
+                
+                flatMap(answer => this.pc.setRemoteDescription(answer))
                 // map(server)
                 // tap((sdp) => console.log('sdp', sdp))
             )

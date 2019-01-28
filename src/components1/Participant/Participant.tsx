@@ -47,13 +47,11 @@ export class Participant extends Component<Props, State>{
                         if (device.kind === 'videoinput') {
                             devices.push(<Option key={device.deviceId} value={device.deviceId}>{device.label}</Option>)
                         }
-                    })
+                    });
                     this.setState({
                         ...this.state,
                         devices,
-                    })
-
-
+                    });
                 })
             )
 
@@ -68,7 +66,8 @@ export class Participant extends Component<Props, State>{
             return this.getVideoStream(this.state.selectedDeviceId)
                 .pipe(
                     flatMap((stream) => SFU.createConversation(stream))
-                ).subscribe(x => console.log(x))
+                )
+                .subscribe(x => console.log('from participant', x))
         } else {
             message.error('choose device');
         }

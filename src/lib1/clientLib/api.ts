@@ -5,10 +5,7 @@ export namespace ClientLib {
         id: number | null
     }
     export interface SFU {
-        // createConversation: (publishStream: MediaStreamTrack) => Observable<{
-        //     publisherStream: MediaStreamTrack
-        //     publisher: string
-        // }>
+        // createConversation: (publishStream: MediaStream) => Observable<any>
         // createRoom: (name?: number) => Observable<number>
         // createParticipant: (id: number) => Observable<void>
     }

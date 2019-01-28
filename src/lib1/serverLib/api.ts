@@ -2,7 +2,11 @@ import { Observable } from "rxjs";
 
 export namespace ServerLib {
     export interface SFU {
+        createConversation: (options: conversationOptions) => Observable<RTCSessionDescriptionInit>
         // createParticipant: (id: number) => Observable<void>
+    }
+    export interface conversationOptions {
+        sdp?: string
     }
     export interface Room {
         id: number | null
@@ -12,7 +16,6 @@ export namespace ServerLib {
         publisher: Pubsilher
         subscriptions: Array<Subscriber>
 
-        createRoom: (roomId?: number) => Observable<Room>
         joinRoom: () => Observable<void>
         leaveRoom: (roomId: number) => Observable<void>
     }

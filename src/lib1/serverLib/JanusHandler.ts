@@ -9,11 +9,12 @@ export class JanusHandler {
 
     private handleId: number | null = null;
     
-    public publisher: rx.Subject<JanusResponse>  = new Subject();
+    public responseObserver: rx.Subject<JanusResponse>  = new Subject();
 
     private readonly ready= new rx.Subject();
     private transactions = new Map();
     constructor(private readonly webSocket: WebSocketAdapter) {
+        
         webSocket.observer
             .flatMap((message: JanusResponse) => {
                 if (message.transaction) {
@@ -36,10 +37,10 @@ export class JanusHandler {
                 }
                 return rx.Observable.of(message);
             })
-        .subscribe(this.publisher);
+        .subscribe(this.responseObserver);
     }
 
-    connect = () => this.webSocket.connect()
+    create = () => rx.Observable.of({})
         .do(() => {
             const transaction = v4();
             this.transactions.set(transaction, true);
