@@ -43,20 +43,17 @@ export class Participant extends Component<Props, State>{
             .pipe(
                 tap((mediaDevices) => {
                     let devices: any[] = [];
-                    let selectedDeviceId;
                     mediaDevices.forEach((device) => {
                         if (device.kind === 'videoinput') {
-                            console.log(device.label, device.label.indexOf('FaceTime'))
-                            if (device.label.indexOf('FaceTime') != -1) {
-                                selectedDeviceId = device.deviceId;
-                            }
                             devices.push(<Option key={device.deviceId} value={device.deviceId}>{device.label}</Option>)
                         }
                     })
                     this.setState({
                         ...this.state,
-                        devices
+                        devices,
                     })
+
+
                 })
             )
 
