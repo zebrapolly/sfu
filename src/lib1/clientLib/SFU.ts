@@ -1,7 +1,7 @@
 import { ClientLib } from "./api";
 import server from "../serverLib/server";
-import { empty, of, from } from "rxjs";
-import { tap, flatMap, map } from "rxjs/operators";
+import { empty, of, from, never  } from "rxjs";
+import { tap, flatMap, map, finalize } from "rxjs/operators";
 
 
 const iceServers: RTCIceServer[] = [
@@ -18,10 +18,65 @@ const iceServers: RTCIceServer[] = [
   ]
 
 class SFU implements ClientLib.SFU {
-    private static instance: SFU;
+
+    constructor(private dialogId: string) {
+
+    }
     private pc = new RTCPeerConnection ({
         iceServers : iceServers
     });
+    public joinRoom = (publisherStream: MediaStream) => {
+        console.log('publisherStream', publisherStream)
+        return this.addTrack(publisherStream)
+            .pipe(
+                flatMap(() => from(this.pc.createOffer({
+                    offerToReceiveVideo : true,
+                    // offerToReceiveAudio : true
+                }))),
+                flatMap(offer => {
+                    return from(this.pc.setLocalDescription(offer))
+                        .map(() => offer);
+                }),
+                flatMap(offer => server.joinRoom({
+                    offer,
+                    roomId: 1234,
+                    dialogId: this.dialogId,
+                    audio: false,
+                    video: true,
+                    // pin
+                })),
+                flatMap(answer => this.pc.setRemoteDescription(answer)),
+                flatMap(() => server.getParticipantObserver(1234, this.dialogId)),
+                finalize(() => {}),
+                tap(sub => this.pc.onicecandidate = ice => {
+                    if (ice.candidate) {
+                        sub.next(ice)
+                    }
+                }),
+                tap(sub => sub
+                    .pipe(
+                        tap(message => {
+                            if (message.sdpMid) {
+                                this.pc.addIceCandidate(message);
+                            }
+                        })
+                    )
+                    .subscribe())
+                // tap(observer => {
+                //     observer.pipe(
+                //         map(sub => this.pc.onicecandidate = ice => {
+                //             if (ice.candidate) {
+                //                 sub.next(ice)
+
+                //             }
+                //             // console.log('ice:', ice);
+                //         })
+                //     )
+                //     .subscribe()
+                // })
+            )
+    }
+
     public createConversation = (publisherStream: MediaStream) => {
         return this.addTrack(publisherStream)
             .pipe(
@@ -33,16 +88,15 @@ class SFU implements ClientLib.SFU {
                     return from(this.pc.setLocalDescription(offer))
                         .map(() => offer);
                 }),
-                map(offer => offer.sdp),
-                flatMap(sdp => server.createConversation({
-                    sdp,
-                    // audio,
-                    // video,
+                // map(offer => offer.sdp),
+                flatMap(offer => server.createConversation({
+                    offer,
+                    dialogId: this.dialogId,
+                    audio: false,
+                    video: false,
                     // pin
-                })),
-                tap((sdp) => console.log('sdp', sdp)),
-                
-                flatMap(answer => this.pc.setRemoteDescription(answer))
+                })),                
+                // flatMap(answer => this.pc.setRemoteDescription(answer))
                 // map(server)
                 // tap((sdp) => console.log('sdp', sdp))
             )
@@ -51,17 +105,11 @@ class SFU implements ClientLib.SFU {
     }
 
     private addTrack = (stream: MediaStream) => {
-        return from(stream.getTracks())
+        return of(stream.getTracks())
                 .pipe(
-                    map(track => this.pc.addTrack(track))
+                    map(tracks => this.pc.addTrack(tracks[0]))
                 )
-    }
-    static getInstance() {
-        if (!SFU.instance) {
-            SFU.instance = new SFU();
-        }
-        return SFU.instance;
     }
 }
 
-export default SFU.getInstance();
+export default SFU;

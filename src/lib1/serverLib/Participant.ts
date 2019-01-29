@@ -1,29 +1,56 @@
 import { ServerLib } from "./api";
-import { Observable, of, empty } from "rxjs";
+import { Observable, of, empty, never, throwError, Subject } from "rxjs";
+import { WebSocketAdapter } from "./WebSocketAdapter";
+import { Publisher } from "./Publisher";
+import { tap, flatMap, map } from "rxjs/operators";
 
 
 export class Participant implements ServerLib.Participant {
 
-    dialogId: string;
-    publisher: ServerLib.Pubsilher;
+    publisher?: Publisher;
     subscriptions = [];
 
-    constructor(dialogId: string, publisher: ServerLib.Pubsilher) {
-        this.dialogId = dialogId;
-        this.publisher = publisher;
-    }
+    constructor(private dialogId: string, private webSocket: WebSocketAdapter, private roomId?: number) {
 
-    createRoom = (roomId?: number) => {
-        return of({
-            id: roomId || 2
-        })
+    }
+    init = () => {
+        return of().pipe(map(() => {}));
+    }
+    configure = (sdp: string) => {
+        if (this.publisher && this.roomId) {
+            return 
+        }
+        return throwError('publisher doesn\'t init');
     }
 
     leaveRoom = (roomId: number) => {
         return empty()
     }
 
-    joinRoom = () => {
-        return empty()
+    joinRoom = (offer: RTCSessionDescriptionInit) => {
+        return this.createPublisher()
+            .pipe(
+                flatMap(() => {
+                    if (this.roomId) {
+                        return this.publisher!.joinRoom(this.roomId);
+                    } else {
+                        return throwError('need roomId');
+                    }
+                }),
+                flatMap(() => this.publisher!.configure({
+                    audio: false,
+                    video: true,
+                    sdp: offer.sdp
+                })),
+                tap((sdp) => console.log('sdp', sdp))
+            )
+    }
+
+    private createPublisher = () => {
+        return of(new Publisher(this.webSocket, this.dialogId))
+            .pipe(
+                tap(publisher => this.publisher = publisher),
+                flatMap(publisher => publisher.init())
+            )
     }
 }

@@ -23,7 +23,7 @@ interface State {
 }
 
 export class Participant extends Component<Props, State>{
-
+    private sfu = new SFU(this.props.name);
     state:State = {
         devices: []
     }
@@ -65,7 +65,7 @@ export class Participant extends Component<Props, State>{
         if (this.state.selectedDeviceId) {
             return this.getVideoStream(this.state.selectedDeviceId)
                 .pipe(
-                    flatMap((stream) => SFU.createConversation(stream))
+                    flatMap((stream) => this.sfu.createConversation(stream))
                 )
                 .subscribe(x => console.log('from participant', x))
         } else {
@@ -73,14 +73,31 @@ export class Participant extends Component<Props, State>{
         }
         
     }
-    private joinRoom = (room: string) => {
+    private joinRoom = () => {
+        if (this.state.selectedDeviceId) {
+            return this.getVideoStream(this.state.selectedDeviceId)
+                .pipe(
+                    flatMap((stream) => this.sfu.joinRoom(stream))
+                )
+                .subscribe(
+                    x => console.log('from participant', x),
+                    error => console.log(error)
+                )
+        } else {
+            message.error('choose device');
+        }
     }
     render() {
         return <Card size='small' title={this.props.name}>
             <Select size='small' onChange={this.selecteChangeHandle} defaultValue={this.state.selectedDeviceId} style={{ width: '320px', marginLeft: '5px' }}>
                 {this.state.devices.map(device => device)}
             </Select>
-            <Meta description={<Button size='small' type="primary" style={{margin: 5, width: 350}} onClick={this.createConversation}>create conversation</Button>}></Meta>     
+            <Meta description={
+                <ButtonGroup>
+                    <Button size='small' type="primary" style={{margin: 5, width: 350}} onClick={this.createConversation}>create conversation</Button>
+                    <Button size='small' type="primary" style={{margin: 5, width: 350}} onClick={this.joinRoom}>join Room</Button>
+                </ButtonGroup>
+                }></Meta>     
         </Card>
     }
 }

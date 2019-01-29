@@ -11,7 +11,7 @@ export class JanusHandler {
     
     public responseObserver: rx.Subject<JanusResponse>  = new Subject();
 
-    private readonly ready= new rx.Subject();
+    private readonly ready: rx.Subject<void>= new rx.Subject();
     private transactions = new Map();
     constructor(private readonly webSocket: WebSocketAdapter) {
         
@@ -40,7 +40,7 @@ export class JanusHandler {
         .subscribe(this.responseObserver);
     }
 
-    create = () => rx.Observable.of({})
+    init = () => rx.Observable.of({})
         .do(() => {
             const transaction = v4();
             this.transactions.set(transaction, true);
@@ -54,7 +54,8 @@ export class JanusHandler {
 
     send = (message: any) => {
         const transaction = v4();
-        this.transactions.set(transaction, true);
+        const subject = new rx.Subject<void>()
+        this.transactions.set(transaction, subject);
         let janus = "message";
         if (message.janus) {
             janus = message.janus;
@@ -65,5 +66,6 @@ export class JanusHandler {
             transaction,
             ...message
         })
+        return subject;
     }
 }

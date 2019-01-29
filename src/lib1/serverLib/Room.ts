@@ -13,7 +13,7 @@ export class Room implements ServerLib.Room {
 
     public create = (id?: number) => of (this.connection)
         // .do (client => this.connection = client)
-        .flatMap (client => client.create ())
+        .flatMap (client => client.init ())
         .do (() =>
             this.connection.send ({
                 body: {
